@@ -1,0 +1,53 @@
+# Everything that runs on the VPS: the API for the Android app (behind Caddy/HTTPS)
+# and the Telegram bot. From the project root:
+#   docker compose -f deploy/docker-compose.yml up -d --build
+#
+# Needs ../.env.bot (Fogo Cruzado + Telegram) and API_DOMAIN in deploy/.env,
+# e.g. API_DOMAIN=203-0-113-5.sslip.io   (see docs/DOCUMENTACAO.md "App Android").
+services:
+  sentinela-api:
+    build:
+      context: ..
+      dockerfile: server/Dockerfile
+    container_name: sentinela-api
+    restart: unless-stopped
+    env_file: ../.env.bot
+    environment:
+      API_ALLOWED_ORIGINS: https://localhost
+    logging: &logs
+      driver: json-file
+      options:
+        max-size: 5m
+        max-file: '3'
+
+  caddy:
+    image: caddy:2.10-alpine
+    container_name: sentinela-caddy
+    restart: unless-stopped
+    depends_on: [sentinela-api]
+    ports:
+      - '80:80'
+      - '443:443'
+    environment:
+      API_DOMAIN: ${API_DOMAIN:?defina API_DOMAIN em deploy/.env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    logging: *logs
+
+  sentinela-bot:
+    build:
+      context: ..
+      dockerfile: bot/Dockerfile
+    container_name: sentinela-bot
+    restart: unless-stopped
+    env_file: ../.env.bot
+    volumes:
+      - bot-data:/data
+    logging: *logs
+
+volumes:
+  caddy-data:
+  caddy-config:
+  bot-data:

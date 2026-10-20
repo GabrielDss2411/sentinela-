@@ -1,0 +1,18 @@
+services:
+  sentinela-bot:
+    build:
+      context: ..
+      dockerfile: bot/Dockerfile
+    container_name: sentinela-bot
+    restart: unless-stopped
+    env_file: ../.env.bot
+    volumes:
+      - bot-data:/data
+    logging:
+      driver: json-file
+      options:
+        max-size: 5m
+        max-file: '3'
+
+volumes:
+  bot-data:
